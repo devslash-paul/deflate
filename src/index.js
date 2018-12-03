@@ -1,6 +1,7 @@
 // https://tools.ietf.org/html/rfc1950
 import React, { Component } from "react";
 import ReactDOM from "react-dom";
+import huffman from "./huffman";
 
 const inlineStyle = {
   "fontFamily": "monospace",
@@ -12,7 +13,6 @@ const inlineStyle = {
 }
 
 const blockStyle = {
-  "width": "22%",
   "fontFamily": "monospace",
   "border": "1px black solid",
   "padding": "5px",
@@ -20,9 +20,66 @@ const blockStyle = {
   "borderRadius": "3px",
 }
 
-const HexToBinary = (hex, reverse) => {
+// convert bytes into 
+const binaryBuffer = (bytes) => {
+  // so we'll do this in a kind of lame way. First converting it to a string binary, then byte reversing it. 
+  let typedArray = new Uint8Array(bytes.match(/[\da-f]{2}/gi).map(function (h) {
+    return parseInt(h, 16)
+  }))
+  let current = 0
+  let n = 0
+  const bit = () => {
+      // get the front bit. If it's not finished, then pop from the right. shift right. 
+      let val = typedArray[n]
+      let ret = (val >> current) & 0x1
+      typedArray[n] = val
+      current++
+      if(current == 8) {
+        n++
+        current=0
+      }
+      return ret
+    }
+  return {
+    next: num => {
+      let val = 0
+      for(var i = 0; i < num; i++) {
+        val |= (bit() << i)
+      }
+      return val
+    },
+    // data is stored packed from 76543210, but stored LSB first.
+    // and data is retrieved straight out
+    nextHuff: num => {
+      let val = 0
+      // read a bit, move it to the left for every one you read
+      for(var i =0 ; i < num; i++) {
+        val = val << 1
+        val = val | bit()
+      }
+      return val
+    },
+    // gets in the form with huffman in a nice format. 
+    // data is not
+    get: () => {
+      // just do what bit does
+      let current = 0
+      let result = ""
+      for(var i =0; i < typedArray.length; i++) {
+        current =0
+        for(var bit = 0; bit < 8; bit++) {
+          var int = typedArray[i] >> bit & 1
+          current |= int << 7 - bit
+        }
+        result += current.toString(2).padStart(8, "0") + " "
+      }
+      return result
+    }
+  }
+}
+
+const HexToBinary = (hex) => {
   const chars = hex.split('')
-  console.log(hex)
   var value = ""
   for(var i = 0; i < chars.length / 2; i++) {
     let conv = chars[i * 2] + chars[i * 2 + 1]
@@ -30,8 +87,23 @@ const HexToBinary = (hex, reverse) => {
     x = x.padStart(8, '0')
     value += x
   }
-  console.log(value)
   return value
+}
+
+const SimpleBinary = ({of, inline=false, pad=8, reverse=false}) => {
+  // let slice = of.substr()
+  let result = of.toString(2).padStart(pad, "0")
+  if(typeof of == "object") {
+    var x = ''
+    of.forEach(element => {
+      x += element.toString(2).padStart(pad, "0") + " "
+    });
+    result = x
+  }
+  let style = inline ? inlineStyle : blockStyle
+  return <div style={style}>
+    {result}
+  </div>
 }
 
 const Binary = ({ of, start = 0, end, pad = 8, inline=false, reverse=false }) => {
@@ -75,17 +147,41 @@ class Index extends Component {
       <ZLibHeader of={this.state.val} />
 
       From here, we're now in the DEFLATE stream. 
-      <Deflate of={this.state.val.substr(4)}/>
+      <Deflate of={binaryBuffer(this.state.val.substr(4))}/>
 
     </div>)
   }
 }
 
 const Deflate = ({of}) => {
+  let fBit = of.next(1)
+  let type = of.next(2)
+  let out = null
+  if(type == "01") {
+    out = <Static  of={of} />
+  } else if (type == "10") {
+    out = <Static  of={of} />
+    // out = <Dynamic of={of} />
+  }
   return <div>
     Deflate is a real treat. Compressed data exists in blocks. These blocks are
     arbitrary sizes (except for when they can't be compressed in which case they're 
     maximum 56,535 byes). 
+    <p>
+      Just a quick note on the bit stream. Attention must be paid to how you pack the bits into bytes, as DEFLATE is concerned
+      with bits that don't exactly pack into a single byte, so one cannot consider a byte in its entirety. 
+    </p>
+    <p>
+      The rules are as follows
+    </p>
+    <ul>
+      <li>Consider a byte kind of like a bus, it fills up from the back.</li>
+      <li>Elements that <b>Aren't</b> the compressed huffman code are placed into the byte LSB to MSB</li>
+      <li>Huffman codes are packed MSB first</li>
+    </ul>
+    <p>
+      I Have NFI why. 
+    </p>
     <p>
       At the start of each block is not just _one_, but _two_ huffman trees.
     </p>
@@ -115,17 +211,17 @@ const Deflate = ({of}) => {
     </p>
     <p>
       Lets start looking at our stream. 
-      <Binary of={of} start={0} reverse={true}/>
+      <SimpleBinary of={of.get()}/>
       <p>
         Because we're in the deflate algorithm now, it's hardly surprising that the first part of this is some
         block headers. 
       </p>
       <p> 
-        <Binary of={of} start={0} end={1} inline={true} /> This is our "Final bit" header. If set to true, this
-        is the last block of the DEFLATE stream. 
+        We start with out final bit header. This is set to 1 if it is the last, 0 otherwise.
+        <SimpleBinary of={fBit} pad={1}/>
       </p>
       <p>
-        The next two bytes (<Binary of={of} start={1} end={3} inline={true} reverse={true}/>) represent the <pre>BTYPE</pre>. Specifying how 
+        The next two bytes (<SimpleBinary of={type} pad={2} inline={true} reverse={true}/>) represent the <pre>BTYPE</pre>. Specifying how 
         this data has been compressed. The values correspond to
         <ul>
           <li>00 - no compression</li>
@@ -134,23 +230,100 @@ const Deflate = ({of}) => {
           <li>11 - reserved, thus error. Lets hope you're not seeing it</li>
         </ul>
 
-        <Static of={of} />
-         {
-           // <Dynamic of={of} start={3}/> 
-         }
+      {out}
 
       </p>
     </p>
   </div>
 }
 
-const Static = ({of, start}) => {
+const Static = ({of}) => {
+  // we're in the static set, lets create an explanation
+  let current = ""
+  let read = []
+  let tries = 0
+  let codes = huffman.staticTable
+
+  // sanity checked limit. Expect to bail before then 
+  let lastCode = -1
+  while(tries < of.get().length) {
+    if(lastCode > 256) {
+      // then we've got extra data to read
+      if (lastCode == 279) {
+        // then we read 5. 
+        current = of.nextHuff(4)
+        read.push({
+          type: "LENGTH",
+          code: current.toString(2).padStart(4, "0"),
+          value: 279 + current
+        })
+        current = of.nextHuff(5)
+        read.push({
+          type: "DISTANCE",
+          code: current.toString(2).padStart(5, "0"),
+          value: 1
+        })
+      }
+    }
+    tries++
+    current = of.nextHuff(7).toString(2).padStart(7, "0")
+    if (codes.includes(current)) {
+      lastCode = codes.indexOf(current)
+      read.push(lastCode)
+      // this is where the special one is
+      if(codes.indexOf(current) == 256) {
+        // then we're done. Break out
+        break;
+      }
+      continue
+    }
+    current += of.nextHuff(1).toString(2)
+    if (codes.includes(current)) {
+      lastCode = codes.indexOf(current)
+      read.push(lastCode)
+      continue
+    }
+    current += of.nextHuff(1).toString(2)
+    if (codes.includes(current)) {
+      lastCode = codes.indexOf(current)
+      read.push(lastCode)
+      continue
+    }
+  }
+  const tab = read.map(row => {
+    if(row.type && row.type == "LENGTH") {
+      return <tr>
+        <td>Length</td>
+        <td>{row.code}</td>
+        <td>Read length: {row.value}</td>
+      </tr>
+    }
+    if(row.type && row.type == "DISTANCE") {
+      return <tr>
+        <td>Distance Back</td>
+        <td>{row.code}</td>
+        <td>Back: {row.value}</td>
+      </tr>
+    }
+    return <tr>
+      <td>{row}</td>
+      <td>{codes[row]}</td>
+      <td>{row == 256 ? "END STREAM" : String.fromCharCode(row)}</td>
+    </tr>
+  })
+
   return <div>
     In static, we're using standardised codes. Lets have a look at them
-
+    <table>
+      <tr>
+        <th>Decoded value</th>
+        <th>Encoded binary</th>
+        <th>UTF-8 value</th>
+      </tr>
+      {tab}
+    </table>
     <pre>
-    {`
-    Lit Value    Bits        Codes
+    {`Lit Value    Bits        Codes
     ---------    ----        -----
       0 - 143     8          00110000 through
                              10111111
@@ -163,41 +336,6 @@ const Static = ({of, start}) => {
                              `}
     </pre>
     <p>
-      So, we now need to grab the next. 
-      <p>
-        10011000. This means we're in the 8 bit section. Specifically, we're talking about 
-        the literal value 104. This is 'h' in ascii.
-      </p>
-      <p>
-        10010101. This is 101 - e
-      </p>
-      <p>
-        10011100. This is 108 - l
-      </p>
-      <p>
-        10011100. This is the same as above.
-      </p>
-      <p>
-        10011111. This is 111 - o.
-      </p>
-      <p>
-        01010000. This is 32 - SPACE
-      </p>
-      <p>
-        10100111. This is 119 - w
-      </p>
-      <p>
-        10011111. This is 111 - o
-      </p>
-      <p>
-        10100010. This is 114 - r
-      </p>
-      <p>
-        10011100. This is 117 - l
-      </p>
-      <p>
-        10010100. This is 100 - d.
-      </p>
         00000000. That's a special one that means end of block
 
         00011010 00001011 00000100 01011101 is the checksum. Which is ADLER32. This 
@@ -261,9 +399,7 @@ const ZLibHeader = ({ of }) => {
   return <div>
     <h4>The ZLib Stream</h4>
     A block is the last block if the 0th byte is 1. Remember that for the a byte, the LSB is considered the 0th bit.
-    Therefore, for a byte
-
-    <Binary of={of} start={0} end={8} inline={true} />
+    
     The start of a block has the following format
     <code>
       <pre>{`
@@ -280,20 +416,15 @@ const ZLibHeader = ({ of }) => {
       <li>bits 4 to 7 are the compression info (CINFO)</li>
     </ul>
     <Binary of={of} start={4} end={8}/>
-
     The compression method is pretty simple, and _almost_ always you'll see the value 8 here. In fact if that's not happened, this page won't work properly.
 
     The compression info is also relatively simple in the most case. I'm expecting you'll see <code>0111</code> here.
-
-    <pre>
-    {`
-      CINFO (Compression info)
-           For CM = 8, CINFO is the base-2 logarithm of the LZ77 window
-           size, minus eight (CINFO=7 indicates a 32K window size). Values
-           of CINFO above 7 are not allowed in this version of the
-           specification.  CINFO is not defined in this specification for
-           CM not equal to 8.
-    `}
+    <pre>{`CINFO (Compression info)
+      For CM = 8, CINFO is the base-2 logarithm of the LZ77 window
+      size, minus eight (CINFO=7 indicates a 32K window size). Values
+      of CINFO above 7 are not allowed in this version of the
+      specification.  CINFO is not defined in this specification for
+      CM not equal to 8.`}
     </pre>
 
     In laymans terms, the CINFO is specifying the window size of the compression that's taking place. LZ77 has a sliding window which it can
