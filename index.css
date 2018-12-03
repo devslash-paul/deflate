@@ -9,3 +9,38 @@ body {
   margin: auto;
   max-width: 800px;
 }
+
+.tooltip {
+  position: relative;
+  cursor: pointer;
+  font-family: monospace;
+  display: inline;
+}
+
+.tooltip .tooltiptext {
+  visibility: hidden;
+  width: 120px;
+  background-color: black;
+  color: #fff;
+  text-align: center;
+  padding: 5px 0;
+  border-radius: 6px;
+
+  /* Position the tooltip text - see examples below! */
+  position: absolute;
+  z-index: 1;
+  margin-left: -60px;
+  bottom: 100%;
+  left: 50%;
+}
+
+.backref {
+  color: red;
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+}
+.tooltip:active .tooltiptext {
+  visibility: visible;
+}

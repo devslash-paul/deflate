@@ -128,9 +128,22 @@ const Binary = ({ of, start = 0, end, pad = 8, inline=false, reverse=false }) =>
 class Index extends Component {
   constructor(props) {
     super(props)
+
+    this.changeSet = this.changeSet.bind(this)
     this.state = {
-      val: "789ccb48cdc9c95728cf2fca4901001a0b045d"
+      // val: "789ccb48cdc9c95728cf2fca4901001a0b045d"
+      val: '789ccb48cd0182fc7c85928cd4a2541d854c85c45c854485e292a2d4c45c3d050fa074be2200fca60cc7',
+      a: '789ccbc9c107d200d1590d0f',
+      b: "789ccb48cdc9c95728cf2fca4901001a0b045d",
+      current: true
     }
+  }
+
+  changeSet() {
+    this.setState({
+      val: this.state.current ? this.state.a : this.state.b,
+      current: !this.state.current
+    })
   }
 
   render() {
@@ -139,6 +152,7 @@ class Index extends Component {
 
       Please enter input as hex stream.
       <input type="text" value={this.state.val} onChange={(e) => this.setState({ val: e.target.value })}></input>
+      <button type="button" onClick={this.changeSet}>Switch</button>
 
       <h4>Binary</h4>
       <Binary of={this.state.val} />
@@ -237,6 +251,30 @@ const Deflate = ({of}) => {
   </div>
 }
 
+const textToToken = (binary, value) => {
+  return {
+    type: "LITERAL",
+    code: binary,
+    value: value
+  }
+}
+
+const getLengthBase = (code) => {
+  return [3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258][code - 257]
+}
+
+const getExtraForLength = (code) => {
+  return [0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0][code - 257]
+}
+
+const getDistanceBase = (code) => {
+  return [1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577][code]
+}
+
+const getDistanceExtra = (code) => {
+  return [0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13][code]
+}
+
 const Static = ({of}) => {
   // we're in the static set, lets create an explanation
   let current = ""
@@ -249,44 +287,70 @@ const Static = ({of}) => {
   while(tries < of.get().length) {
     if(lastCode > 256) {
       // then we've got extra data to read
-      if (lastCode == 279) {
-        // then we read 5. 
-        current = of.nextHuff(4)
-        read.push({
-          type: "LENGTH",
-          code: current.toString(2).padStart(4, "0"),
-          value: 279 + current
-        })
-        current = of.nextHuff(5)
-        read.push({
-          type: "DISTANCE",
-          code: current.toString(2).padStart(5, "0"),
-          value: 1
-        })
+      const extraLength = getExtraForLength(lastCode)
+      let baseLength = getLengthBase(lastCode)
+
+      // current at this point, is the code saying to go back. 
+      // keep it that way. 
+      // the extra length comes from the base length plus the 
+      // huffman
+      if(extraLength > 0) {
+        const neededExtra = of.nextHuff(extraLength)
+        baseLength += neededExtra
       }
+        // read the next part
+      read.push({
+        type: "LENGTH",
+        code: current.toString(2).padStart(4, "0"),
+        value: baseLength
+      })
+
+      current = of.nextHuff(5)
+      let distanceBase = getDistanceBase(current)
+      const distExtra = getDistanceExtra(current)
+
+      if(distExtra > 0) {
+        const extra = of.nextHuff(distExtra)
+        distanceBase += extra
+      }
+
+      read.push({
+        type: "DISTANCE",
+        code: current.toString(2).padStart(9, "0"),
+        value: distanceBase
+      })
+      lastCode = -1
     }
+    
     tries++
     current = of.nextHuff(7).toString(2).padStart(7, "0")
     if (codes.includes(current)) {
       lastCode = codes.indexOf(current)
-      read.push(lastCode)
-      // this is where the special one is
-      if(codes.indexOf(current) == 256) {
-        // then we're done. Break out
-        break;
+      if (lastCode == 256) {
+        read.push({
+          type: "END",
+          code: current,
+          value: 256,
+        })
+        break
+      } else if(lastCode < 256) {
+        read.push(textToToken(current, lastCode))
       }
       continue
     }
     current += of.nextHuff(1).toString(2)
     if (codes.includes(current)) {
       lastCode = codes.indexOf(current)
-      read.push(lastCode)
+      if(lastCode > 256) {
+        continue
+      }
+      read.push(textToToken(current, lastCode))
       continue
     }
     current += of.nextHuff(1).toString(2)
     if (codes.includes(current)) {
       lastCode = codes.indexOf(current)
-      read.push(lastCode)
+      read.push(textToToken(current, lastCode))
       continue
     }
   }
@@ -305,11 +369,13 @@ const Static = ({of}) => {
         <td>Back: {row.value}</td>
       </tr>
     }
-    return <tr>
-      <td>{row}</td>
-      <td>{codes[row]}</td>
-      <td>{row == 256 ? "END STREAM" : String.fromCharCode(row)}</td>
-    </tr>
+    if(row.type && row.type == "LITERAL") {
+      return <tr>
+        <td>{row.value}</td>
+        <td>{codes[row.value]}</td>
+        <td>{row == 256 ? "END STREAM" : String.fromCharCode(row.value)}</td>
+      </tr>
+    }
   })
 
   return <div>
@@ -322,6 +388,7 @@ const Static = ({of}) => {
       </tr>
       {tab}
     </table>
+    <TokenSet tokens={read} />
     <pre>
     {`Lit Value    Bits        Codes
     ---------    ----        -----
@@ -342,6 +409,64 @@ const Static = ({of}) => {
         matches the checksum of the data that we've decompressed
     </p>
   </div>
+}
+
+const Literal = ({code, value}) => {
+  return <div className="tooltip">
+      <div className="tooltiptext">
+        encoded as: {code}
+      </div>
+      {String.fromCharCode(value)}
+    </div>
+}
+
+const BaseLength = ({dist, length, of, provider}) => {
+  return <div className="tooltip backref">
+    <div className="tooltiptext">
+     {dist}
+    </div>
+    {of}
+  </div>
+}
+
+const TokenSet = ({tokens}) => {
+  let length = null
+  let current = ""
+  let extensions = 0
+  const literals = tokens.map(x => {
+    switch(x.type) {
+     case "LITERAL": {
+       current += String.fromCharCode(x.value)
+       return <Literal {...x} />
+     }
+     case "DISTANCE": {
+      const len = length.value
+      const di = x.value + extensions
+      // the length can be longer than the back ref. SO 
+      // a way to do is it to build up the new string bit by bit and
+      // just select the next one. We start at distnace back
+      const start = current.length
+      let added = "" + current  
+      extensions += len
+      for (var i = current.length - di; i < start - di + len; i++) {
+        // then we copy what is at i to the stream
+        added += added.charAt(i)
+      }
+      current = added
+       return <BaseLength of={added.substr(start)} dist={di}/>
+     }
+     case "LENGTH": {
+       length = x
+     }
+    }
+  })
+  return (
+    <div className="tokenset">
+      <div>
+        {literals}
+      </div>
+    </div>
+  )
 }
 
 const Dynamic = ({ of, start }) => {
