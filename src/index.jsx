@@ -69,7 +69,7 @@ const binaryBuffer = bytes => {
         let getCurrent = 0;
         for (let getBit = 0; getBit < 8; getBit++) {
           const int = (typedArray[i] >> getBit) & 0x1;
-          getCurrent |= int << (7 - bit);
+          getCurrent |= int << (7 - getBit);
         }
         result += `${getCurrent.toString(2).padStart(8, '0')} `;
       }
@@ -90,18 +90,23 @@ const HexToBinary = hex => {
   return value;
 };
 
-const SimpleBinary = ({ of, inline = false, pad = 8 }) => {
+const SimpleBinary = ({
+  of, st, inline = false, pad = 8,
+}) => {
   // let slice = of.substr()
-  let result = of.toString(2).padStart(pad, '0');
-  if (typeof of === 'object') {
-    let x = '';
-    of.forEach(element => {
-      x += `${element.toString(2).padStart(pad, '0')} `;
-    });
-    result = x;
-  }
   const style = inline ? inlineStyle : blockStyle;
-  return <div style={style}>{result}</div>;
+  if (of != null) {
+    let result = of.toString(2).padStart(pad, '0');
+    if (typeof of === 'object') {
+      let x = '';
+      of.forEach(element => {
+        x += `${element.toString(2).padStart(pad, '0')} `;
+      });
+      result = x;
+    }
+    return <div style={style}>{result}</div>;
+  }
+  return <div style={style}>{st}</div>;
 };
 
 const Binary = ({
@@ -139,23 +144,24 @@ class Index extends Component {
     this.onChange = this.onChange.bind(this);
     this.state = {
       // val: "789ccb48cdc9c95728cf2fca4901001a0b045d"
-      val:
+      stream:
         '789ccb48cd0182fc7c85928cd4a2541d854c85c45c854485e292a2d4c45c3d050fa074be2200fca60cc7',
-      a: '789ccbc9c107d200d1590d0f',
+      a: '789c5553490edb300cfc0a1f60f80f45d15b37a0e80318897158687128d1e8f33b929da63d3956c4e16cfe5c4d32e9de3c53aca91a35edc459fa42a19626a14b77238eba6b0b5a3692a47da51f12a9d5c8491a250ede4836e9943080df5aba58f4bc9077bae94d0a5e084000214fdd34485be9fb839ba48481430f31632ada940e49147d3c1f1a3c3105b7e6b8ff21e9d33963714a1ab47bd442a51692a2999e0ef02679175be9ab270c9e6fd4b5048d5e3a550b0a76c427d24a5fd80d63356aa534cc58e801b626061f40be9ffc78a1bb5896d2a1638760317ea97df3c2d1ffe752840b45dda0ab81e25c03d4ac00ce3b80ab153659e95357004c0fc1673872895fc8bc1bb64e7658b1501ef21bfdf2d6eb4a1f8d1bedd57ad78efc2edcccadf120f4c259e967278dffdc6484b4101622e8a89736b6e06f41af58c6559286ddd3e4834d47e2bf49eef719848d185eae8f440e482fdc713949bdfec8f0d0379d12263dd0e1103c379804129b83cf5592e9d4e169f7ced8dd785729b34e6f01e7212cafede495d034ab7f7d177fc577373457d370f3ecd26c31f62fb0f506400c17bd3ddeca678e474dde7746ddbf8dde5cb221ab3e5d689f026f030c89f2c81851230b368800339c5618d7168cb430bf23d338d21801a1207f005f1a49c2',
       b: '789ccb48cdc9c95728cf2fca4901001a0b045d',
+
       current: true,
     };
   }
 
   onChange(e) {
-    this.setState(() => ({
-      val: e.target.value,
+    this.setState(({
+      stream: e.target.value,
     }));
   }
 
   changeSet() {
     this.setState(state => ({
-      val: state.current ? state.a : state.b,
+      stream: state.current ? state.a : state.b,
       current: !state.current,
     }));
   }
@@ -166,11 +172,7 @@ class Index extends Component {
       <div>
         <h2>How zlib/deflate works</h2>
         Please enter input as hex stream.
-        <input
-          type="text"
-          value={stream}
-          onChange={this.onChange}
-        />
+        <input type="text" value={stream} onChange={this.onChange} />
         <button type="button" onClick={this.changeSet}>
           Switch
         </button>
@@ -189,11 +191,10 @@ const Deflate = ({ of }) => {
   const fBit = of.next(1);
   const type = of.next(2);
   let out = null;
-  if (type == '01') {
+  if (type === 1) {
     out = <Static of={of} />;
-  } else if (type == '10') {
-    out = <Static of={of} />;
-    // out = <Dynamic of={of} />
+  } else if (type === 2) {
+    out = <Dynamic of={of} />;
   }
   return (
     <div>
@@ -253,7 +254,7 @@ the compressed huffman code are placed into the byte LSB
       </p>
       <p>
         Lets start looking at our stream.
-        <SimpleBinary of={of.get()} />
+        <SimpleBinary st={of.get()} />
         <p>
           Because we're in the deflate algorithm now, it's hardly surprising
           that the first part of this is some block headers.
@@ -474,7 +475,7 @@ const Static = ({ of }) => {
       .padStart(7, '0');
     if (codes.includes(current)) {
       lastCode = codes.indexOf(current);
-      if (lastCode == 256) {
+      if (lastCode === 256) {
         read.push({
           type: 'END',
           code: current,
@@ -527,7 +528,7 @@ const Static = ({ of }) => {
         </tr>
       );
     }
-    if (row.type && row.type == 'LITERAL') {
+    if (row.type && row.type === 'LITERAL') {
       return (
         <tr>
           <td>{row.value}</td>
@@ -576,7 +577,7 @@ const Static = ({ of }) => {
 const Literal = ({ code, value }) => (
   <div className="tooltip">
     <div className="tooltiptext">
-encoded as:
+      encoded as:
       {code}
     </div>
     {String.fromCharCode(value)}
@@ -584,7 +585,7 @@ encoded as:
 );
 
 const BaseLength = ({
-  dist, length, of, provider,
+  dist, of,
 }) => (
   <div className="tooltip backref">
     <div className="tooltiptext">{dist}</div>
@@ -620,10 +621,13 @@ const TokenSet = ({ tokens }) => {
       }
       case 'LENGTH': {
         length = x;
-        break;
+        return null;
+      }
+      case 'END': {
+        return null;
       }
       default:
-        throw new Error('Unexpected Token');
+        throw new Error(`Unexpected Token: ${x.type}`);
     }
   });
   return (
@@ -633,64 +637,67 @@ const TokenSet = ({ tokens }) => {
   );
 };
 
-const Dynamic = ({ of, start }) => (
-  <div>
-    <p>
+const Dynamic = ({ of }) => {
+  const hlit = of.next(5);
+  return (
+    <div>
+      <p>
       So this is a dynamic block. To read this we have to first read the huffman
       tables. In a compressed block data is compressed in either
-      <ul>
-        <li>A literal byte, when the value is between 0, and 255</li>
-        <li>
+        <ul>
+          <li>A literal byte, when the value is between 0, and 255</li>
+          <li>
           A length,backwards pair where the length is from 3..258) and distance
           is between 0..32,768.
-        </li>
-      </ul>
-    </p>
-    <p>
+          </li>
+        </ul>
+      </p>
+      <p>
       The first 5 bits, are HLIT. The number of literal / length codes.
-      <Binary of={of} start={start} end={start + 5} reverse />
-      {' '}
+        {hlit}
+        {' '}
 we add 257 to
       this value to get what we're after
-    </p>
-    <p>
+      </p>
+      <p>
       The next 5 bits are the number of distance codes
-      <Binary of={of} start={start + 5} end={start + 5 + 5} reverse />
+        {/* <Binary of={of} start={start + 5} end={start + 5 + 5} reverse /> */}
       Again. Reverse this and it becomes 10010 = 18
-    </p>
-    <p>
+      </p>
+      <p>
       The last header is the HCLEN which is the number of code lengths, minus 4.
-      <Binary of={of} start={start + 5 + 5} end={start + 5 + 5 + 4} reverse />
+        { /* <Binary of={of} start={start + 5 + 5} end={start + 5 + 5 + 4} reverse /> */}
       The HCLEN is 8
-    </p>
-    <p>
+      </p>
+      <p>
       The next part works with HCLEN (example 8) * 3 bits.
-      <Binary of={of} start={start + 14} end={start + 14 + 24} reverse />
-    </p>
-    <p>
+        { /* (<Binary of={of} start={start + 14} end={start + 14 + 24} reverse /> */}
+      </p>
+      <p>
       So this is giving us the lengths of the alphabets for code lenghts. This
       is working with the alphabet: 16, 17, 18,0, 8, 7, 9, 6, 10, 5, 11, 4, 12,
       3, 13, 2, 14, 1, 15.
-    </p>
-    <p>
+      </p>
+      <p>
       In our example, thie means that
-      <ul>
-        <li>16 = 110 = 6</li>
-        <li>17 = 110 = 6</li>
-        <li>18 = 011 = 7</li>
-        <li>0 = 100 = 1</li>
-        <li>8 = 100 = 1</li>
-        <li>7 = 101 = 1</li>
-        <li>9 = 001 = 1</li>
-        <li>9 = 001 = 1</li>
-      </ul>
-    </p>
-    <p>
+        <ul>
+          <li>16 = 110 = 6</li>
+          <li>17 = 110 = 6</li>
+          <li>18 = 011 = 7</li>
+          <li>0 = 100 = 1</li>
+          <li>8 = 100 = 1</li>
+          <li>7 = 101 = 1</li>
+          <li>9 = 001 = 1</li>
+          <li>9 = 001 = 1</li>
+        </ul>
+      </p>
+      <p>
       Now, HLIT + 275 code lengths for the literal/length alphabet. Encoded
       using the code length huffman.
-    </p>
-  </div>
-);
+      </p>
+    </div>
+  );
+};
 
 const ZLibHeader = ({ of }) => (
   <div>
