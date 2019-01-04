@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "webpack --mode development",
-    "build": "webpack --mode production"
+    "build": "webpack --mode production",
+    "storybook": "start-storybook -p 6006",
+    "build-storybook": "build-storybook"
   },
   "babel": {
     "presets": [
@@ -17,12 +19,18 @@
   "license": "ISC",
   "dependencies": {
     "react": "^16.6.0",
-    "react-dom": "^16.6.0"
+    "react-dom": "^16.6.0",
+    "react-log-lifecycle": "^1.1.0"
   },
   "devDependencies": {
     "@babel/core": "^7.1.2",
     "@babel/preset-env": "^7.1.0",
     "@babel/preset-react": "^7.0.0",
+    "@storybook/addon-actions": "^4.1.4",
+    "@storybook/addon-links": "^4.1.4",
+    "@storybook/addon-viewport": "^4.1.4",
+    "@storybook/addons": "^4.1.4",
+    "@storybook/react": "^4.1.4",
     "babel-eslint": "^10.0.1",
     "babel-loader": "^8.0.4",
     "eslint": "^5.9.0",
