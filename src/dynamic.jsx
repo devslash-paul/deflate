@@ -22,7 +22,7 @@ export class Dynamic extends Component {
     const actualHlit = hlit + 257
     const alphabet = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]
     const bitTable = Array(alphabet.length).fill(0)
-    for(var i = 0; i < actualHclen; i++) {
+    for (var i = 0; i < actualHclen; i++) {
       bitTable[alphabet[i]] = stream.next(3)
     }
     // const bitTable = hlenBitTable(stream, actualHclen)
@@ -46,10 +46,10 @@ export class Dynamic extends Component {
       while (map[start] === undefined) {
         start += ("" + stream.next(1))
       }
-      return huffmap[start]
+      return map[start]
     }
 
-    for (var i = 0; i < actualHlit;) {
+    for (var i = 0; i < actualHlit + hdist;) {
       if (runLen > 0) {
         foundTokens[i] = last
         runLen--
@@ -82,7 +82,26 @@ export class Dynamic extends Component {
     for (var i = 0; i < actualHlit; i++) {
       compressedAlph.push(i)
     }
-    const compressedHuffmap = createTable(foundTokens, compressedAlph)
+    var lengthAlph = []
+    for(var i = 0; i < hdist; i++) {
+      lengthAlph.push(i)
+    }
+
+    const litLength = createTable(foundTokens.slice(0, actualHlit), compressedAlph)
+    const litMap = {}
+    for (var i = 0; i < litLength.length; i++) {
+      if (litLength[i] !== 0) {
+        litMap[litLength[i]] = i
+      }
+    }
+    
+    // now we go and decrypt
+    let leggo = []
+    for(var i = 0; i < 100; i++) {
+      let token = nextToken(stream, litMap)
+      leggo.push(String.fromCharCode(token))
+    }
+    var i =0
 
     return (
       <div>
@@ -129,7 +148,9 @@ export class Dynamic extends Component {
         <p>
           {JSON.stringify(bitTable)}
           This makes the huffman tree
-        <HuffmanTree alphabet={[16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]} lens={bitTable} />
+          <div className="alphaHuff">
+            <HuffmanTree alphabet={[16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]} lens={bitTable} />
+          </div>
         </p>
         <p>
           So, now we must read {actualHlit} codes. This is not {actualHlit} bits, but rather codes from the huffman tree
@@ -166,11 +187,21 @@ export class Dynamic extends Component {
       </p>
         <p>
         </p>
-        <div className="bigsvg">
-        <HuffmanTree alphabet={compressedAlph} lens={foundTokens} />
+        <div>
+          <HuffmanTree alphabet={compressedAlph} lens={foundTokens.slice(0, actualHlit)} />
         </div>
-        And that's it
-  
+        <p>
+        That's not the last huffman we'll see. We still have to get the distance huffman
+        </p>
+        <HuffmanTree alphabet={lengthAlph} lens={foundTokens.slice(actualHlit)} />
+        <p>
+          FINALLY. WE have the tools to decode this block. Dear reader, hopefully reading to this section hasn't taken you too
+          long, but at this stage i'm a few weeks worth of spare time to get to this part.
+        </p>
+
+        <code>
+          {leggo.join('')}
+        </code>
     </div>
     );
   }

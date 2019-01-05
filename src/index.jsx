@@ -5,6 +5,7 @@ import ReactDOM from 'react-dom';
 import { Binary, SimpleBinary } from './binary'
 import { Static } from './static';
 import { Dynamic } from './dynamic'
+import {Huffman} from './huffmantree';
 
 class Stream {
   constructor(view, n = 0, current = 0) {
@@ -96,9 +97,9 @@ const binaryBuffer = bytes => {
       this.onChange = this.onChange.bind(this);
       this.state = {
         // val: "789ccb48cdc9c95728cf2fca4901001a0b045d"
-        stream:
+        a:
           '789ccb48cd0182fc7c85928cd4a2541d854c85c45c854485e292a2d4c45c3d050fa074be2200fca60cc7',
-        a: '789c5553490edb300cfc0a1f60f80f45d15b37a0e80318897158687128d1e8f33b929da63d3956c4e16cfe5c4d32e9de3c53aca91a35edc459fa42a19626a14b77238eba6b0b5a3692a47da51f12a9d5c8491a250ede4836e9943080df5aba58f4bc9077bae94d0a5e084000214fdd34485be9fb839ba48481430f31632ada940e49147d3c1f1a3c3105b7e6b8ff21e9d33963714a1ab47bd442a51692a2999e0ef02679175be9ab270c9e6fd4b5048d5e3a550b0a76c427d24a5fd80d63356aa534cc58e801b626061f40be9ffc78a1bb5896d2a1638760317ea97df3c2d1ffe752840b45dda0ab81e25c03d4ac00ce3b80ab153659e95357004c0fc1673872895fc8bc1bb64e7658b1501ef21bfdf2d6eb4a1f8d1bedd57ad78efc2edcccadf120f4c259e967278dffdc6484b4101622e8a89736b6e06f41af58c6559286ddd3e4834d47e2bf49eef719848d185eae8f440e482fdc713949bdfec8f0d0379d12263dd0e1103c379804129b83cf5592e9d4e169f7ced8dd785729b34e6f01e7212cafede495d034ab7f7d177fc577373457d370f3ecd26c31f62fb0f506400c17bd3ddeca678e474dde7746ddbf8dde5cb221ab3e5d689f026f030c89f2c81851230b368800339c5618d7168cb430bf23d338d21801a1207f005f1a49c2',
+        stream: '789c5553490edb300cfc0a1f60f80f45d15b37a0e80318897158687128d1e8f33b929da63d3956c4e16cfe5c4d32e9de3c53aca91a35edc459fa42a19626a14b77238eba6b0b5a3692a47da51f12a9d5c8491a250ede4836e9943080df5aba58f4bc9077bae94d0a5e084000214fdd34485be9fb839ba48481430f31632ada940e49147d3c1f1a3c3105b7e6b8ff21e9d33963714a1ab47bd442a51692a2999e0ef02679175be9ab270c9e6fd4b5048d5e3a550b0a76c427d24a5fd80d63356aa534cc58e801b626061f40be9ffc78a1bb5896d2a1638760317ea97df3c2d1ffe752840b45dda0ab81e25c03d4ac00ce3b80ab153659e95357004c0fc1673872895fc8bc1bb64e7658b1501ef21bfdf2d6eb4a1f8d1bedd57ad78efc2edcccadf120f4c259e967278dffdc6484b4101622e8a89736b6e06f41af58c6559286ddd3e4834d47e2bf49eef719848d185eae8f440e482fdc713949bdfec8f0d0379d12263dd0e1103c379804129b83cf5592e9d4e169f7ced8dd785729b34e6f01e7212cafede495d034ab7f7d177fc577373457d370f3ecd26c31f62fb0f506400c17bd3ddeca678e474dde7746ddbf8dde5cb221ab3e5d689f026f030c89f2c81851230b368800339c5618d7168cb430bf23d338d21801a1207f005f1a49c2',
         b: '789ccb48cdc9c95728cf2fca4901001a0b045d',
 
         current: true,
@@ -121,7 +122,9 @@ const binaryBuffer = bytes => {
     render() {
       const { stream } = this.state;
       return (
-        <div>
+        <div><Huffman tree={
+    {right: {left: {right: {right: {right:{val: "A"}}}}}}
+  } len={10}/>
           <h2>How zlib/deflate works</h2>
           Please enter input as hex stream.
         <input type="text" value={stream} onChange={this.onChange} />
