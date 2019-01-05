@@ -17,6 +17,17 @@ body {
   display: inline;
 }
 
+.bigsvg {
+  position: absolute;
+  left: 0;
+  display: inline-block;
+  background: #f3f3f3;
+  padding: 50px;
+  max-width: 100%;
+  box-sizing: border-box;
+  width: 100%;
+}
+
 .tooltip .tooltiptext {
   visibility: hidden;
   width: 120px;

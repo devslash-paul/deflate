@@ -14,9 +14,7 @@ export const HuffmanTree = ({ alphabet, lens }) => {
   // go down each path until the path terminates with a value
   const tree = recurseTree(other, "", {})
 
-  return <div>
-    <Huffman tree={tree} len={10}/>
-  </div>
+  return <Huffman tree={tree} len={10}/>
 }
 
 const recurseTree = (table, prefix, output) => {

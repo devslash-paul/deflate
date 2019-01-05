@@ -7,33 +7,37 @@ import LogLifecyle from 'react-log-lifecycle';
 export class Dynamic extends Component {
   constructor(props) {
     super(props)
-    console.log("Dynamic")
+    this.stream = props.stream.copy()
   }
 
   render() {
-    let { stream } = this.props;
+    let stream = this.stream
     console.log("Render: ")
     console.log(stream.index())
 
     const hlit = stream.next(5);
-    const hdist = stream.next(5);
+    const hdist = stream.next(5) + 1;
     const hclen = stream.next(4)
-    const actualHclen = (hclen + 4) * 3
-    const bitTable = hlenBitTable(stream, actualHclen)
+    const actualHclen = (hclen + 4)
     const actualHlit = hlit + 257
-    // now lets read the stream until it's all ready
     const alphabet = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]
+    const bitTable = Array(alphabet.length).fill(0)
+    for(var i = 0; i < actualHclen; i++) {
+      bitTable[alphabet[i]] = stream.next(3)
+    }
+    // const bitTable = hlenBitTable(stream, actualHclen)
+    // now lets read the stream until it's all ready
+    //bit table confirmed correct
     const huffmanTable = createTable(bitTable, alphabet)
+
     const huffmap = {}
     for (var i = 0; i < huffmanTable.length; i++) {
       if (huffmanTable[i] !== 0) {
-        huffmap[huffmanTable[i]] = alphabet[i]
+        huffmap[huffmanTable[i]] = i
       }
     }
 
     // Get the code lengths for the hlit
-    let count = 0;
-    let current = ""
     let foundTokens = []
     let runLen = 0
     let last = -1;
@@ -50,6 +54,7 @@ export class Dynamic extends Component {
         foundTokens[i] = last
         runLen--
         i++
+        continue
       } else {
         let token = nextToken(stream, huffmap)
         if (token === 16) {
@@ -66,8 +71,8 @@ export class Dynamic extends Component {
           last = 0
         } else {
           last = token
-          i++
           foundTokens[i] = token
+          i++
         }
       }
     }
@@ -161,7 +166,9 @@ export class Dynamic extends Component {
       </p>
         <p>
         </p>
+        <div className="bigsvg">
         <HuffmanTree alphabet={compressedAlph} lens={foundTokens} />
+        </div>
         And that's it
   
     </div>
