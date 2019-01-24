@@ -1,10 +1,13 @@
 module.exports = {
-  mode: 'development',
-  entry: './src/index.jsx',
+  mode: 'production',
+  entry: {
+    main: './src/index.jsx', 
+    debug: './src/huffman_all/debug.jsx'
+  },
   output: {
     path: `${__dirname}/dist`,
     publicPath: '/',
-    filename: 'bundle.js',
+    filename: '[name].bundle.js',
   },
   module: {
     rules: [

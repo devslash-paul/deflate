@@ -14,11 +14,11 @@ export const HuffmanTree = ({ alphabet, lens }) => {
   // go down each path until the path terminates with a value
   const tree = recurseTree(other, "", {})
 
-  return <Huffman tree={tree} len={10}/>
+  return <Huffman tree={tree}/>
 }
 
 const recurseTree = (table, prefix, output) => {
-  if(prefix.length > 10) return output;
+  if(prefix.length > 15) return output;
   //TODO: Change it so that if no prefixes startwith the prefix, then give up
   if(table[prefix + "0"] !== undefined) {
     // left exists
@@ -78,6 +78,7 @@ export const createTable = (arr, alph) => {
     const len = arr[n];
     if (len !== 0) {
       codes[n] = nextCode[len].toString(2).padStart(len, '0');
+      // codes[alph[n]]= nextCode[len].toString(2).padStart(len, '0');
       nextCode[len]++;
     }
   }

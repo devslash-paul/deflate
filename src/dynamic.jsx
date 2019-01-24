@@ -3,6 +3,7 @@ import { SimpleBinary } from './binary';
 import { hlenBitTable } from './dynamic_constants';
 import { HuffmanTree, createTable } from './huffman'
 import LogLifecyle from 'react-log-lifecycle';
+import { getExtraForLength, getDistanceExtra, getDistanceBase, getLengthBase } from "./static_constants";
 
 export class Dynamic extends Component {
   constructor(props) {
@@ -43,7 +44,12 @@ export class Dynamic extends Component {
     let last = -1;
     let nextToken = (stream, map) => {
       let start = ""
+      let i = 0
       while (map[start] === undefined) {
+        i++
+        if(i > 100) {
+          return 0
+        }
         start += ("" + stream.next(1))
       }
       return map[start]
@@ -83,25 +89,59 @@ export class Dynamic extends Component {
       compressedAlph.push(i)
     }
     var lengthAlph = []
-    for(var i = 0; i < hdist; i++) {
+    for (var i = 0; i < hdist; i++) {
       lengthAlph.push(i)
     }
 
     const litLength = createTable(foundTokens.slice(0, actualHlit), compressedAlph)
+    const lenLength = createTable(foundTokens.slice(actualHlit), lengthAlph)
     const litMap = {}
     for (var i = 0; i < litLength.length; i++) {
       if (litLength[i] !== 0) {
         litMap[litLength[i]] = i
       }
     }
-    
+    const lenMap = {}
+    for (var i = 0; i < lenLength.length; i++) {
+      if (lenLength[i] !== 0) {
+        lenMap[lenLength[i]] = i
+      }
+    }
+
     // now we go and decrypt
     let leggo = []
-    for(var i = 0; i < 100; i++) {
-      let token = nextToken(stream, litMap)
-      leggo.push(String.fromCharCode(token))
+    for (var i = 0; i < 10000; i++) {
+      let dectoken = nextToken(stream, litMap)
+      console.log(dectoken)
+      if (dectoken < 256) {
+        leggo.push(String.fromCharCode(dectoken))
+      } else if (dectoken == 256) {
+        break;
+      } else if (dectoken < 285) {
+        // we're going back
+        console.log(dectoken)
+
+        const lengthBase = getLengthBase(dectoken)
+        const lengthExtra = getExtraForLength(dectoken)
+        const lengthExtraValue = stream.next(lengthExtra)
+
+        const backToken = nextToken(stream, lenMap)
+        const backExtra = getDistanceExtra(backToken)
+        const backBase = getDistanceBase(backToken)
+        const backExtraValue = stream.next(backExtra)
+
+        let len = (lengthBase + lengthExtraValue)
+        let x = ""
+        while (len > 0) {
+          len--
+          let letter = leggo[leggo.length - backExtraValue - backBase]
+          x += letter
+          leggo.push(letter)
+        }
+        console.log("Around" )
+        console.log(x)
+      }
     }
-    var i =0
 
     return (
       <div>
@@ -149,7 +189,7 @@ export class Dynamic extends Component {
           {JSON.stringify(bitTable)}
           This makes the huffman tree
           <div className="alphaHuff">
-            <HuffmanTree alphabet={[16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]} lens={bitTable} />
+            <HuffmanTree alphabet={[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]} lens={bitTable} />
           </div>
         </p>
         <p>
@@ -191,7 +231,7 @@ export class Dynamic extends Component {
           <HuffmanTree alphabet={compressedAlph} lens={foundTokens.slice(0, actualHlit)} />
         </div>
         <p>
-        That's not the last huffman we'll see. We still have to get the distance huffman
+          That's not the last huffman we'll see. We still have to get the distance huffman
         </p>
         <HuffmanTree alphabet={lengthAlph} lens={foundTokens.slice(actualHlit)} />
         <p>
@@ -202,7 +242,10 @@ export class Dynamic extends Component {
         <code>
           {leggo.join('')}
         </code>
-    </div>
+        <p>
+          And we're done!
+        </p>
+      </div>
     );
   }
 }

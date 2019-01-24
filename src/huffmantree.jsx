@@ -94,15 +94,13 @@ export class Huffman extends Component {
   }
 
   render() {
-    const { tree, len } = this.props;
+    const { tree } = this.props;
     const { x, y, w, h } = this.state;
     this.knuth(tree, 1, { i: 0 })
 
     return (
       <svg ref={this.svgRef} viewBox={`${x} ${y} ${w} ${h}`} preserveAspectRatio='xMidYMid meet'
-        style={{ width: "100%", height: "100%" }}
-      >
-        {/* <Node report={this.report} maxDepth={maxdepth} scale={scale} val={tree.val} at={{ x: 500, y: 25 }} left={tree.left} right={tree.right} /> */}
+        style={{ width: "100%", height: "100%" }}>
         <Node val={tree} />
       </svg>
     )
