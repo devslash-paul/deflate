@@ -15,21 +15,22 @@ class Node extends Component {
     const posX = val.x;
     const posY = val.y;
     let x = posX * 20 + 30
-    let y = posY * 100 + 30
+    const yChange = 75;
+    let y = posY * yChange + 30
 
     const id = Math.floor((1 + Math.random()) * 0x10000)
       .toString(16)
       .substring(1);
 
     const leftLine = left ? <g>
-      <path id={`${id}L`} d={`M${x} ${y} Q${x - 25} ${y}, ${left.x * 20 + 30} ${left.y * 100 + 30}`} fill="transparent" stroke="black" strokeWidth="2px" />
+      <path id={`${id}L`} d={`M${x} ${y} Q${x - 25} ${y}, ${left.x * 20 + 30} ${left.y * yChange + 30}`} fill="transparent" stroke="black" strokeWidth="2px" />
       <text dy="15">
         <textPath offset="5" startOffset="50%" href={`#${id}L`}>0</textPath>
       </text>
     </g> : null
     const nextLeft = left ? <Node val={left} /> : null
     const rightLine = right ? <g>
-      <path id={`${id}R`} d={`M${x} ${y} Q${x + 25} ${y}, ${right.x * 20 + 30} ${right.y * 100 + 30}`} stroke="black" strokeWidth="2px" fill="transparent" />
+      <path id={`${id}R`} d={`M${x} ${y} Q${x + 25} ${y}, ${right.x * 20 + 30} ${right.y * yChange + 30}`} stroke="black" strokeWidth="2px" fill="transparent" />
       <text dy="-8">
         <textPath offset="5" startOffset="50%" href={`#${id}R`}>1</textPath>
       </text>

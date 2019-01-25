@@ -63,11 +63,12 @@ export class DeflateBlock {
       const bitTableTree = lenToTree(bitTable)
       const metaHuffman = toHuffman(bitTableTree)
 
-      const litLenLengths = decode_lens(stream, metaHuffman, 257 + hlit)
+      const allLens = decode_lens(stream, metaHuffman, 257 + 1 + hlit + hdist)
+      const litLenLengths = allLens.slice(0, 257 + hlit)// decode_lens(stream, metaHuffman, 257 + hlit)
       this.output.tables.litLenLengths = litLenLengths
       this.output.tables.litLenHuff = toHuffman(lenToTree(litLenLengths), alphTo(285))
 
-      const backLengths = decode_lens(stream, metaHuffman, hdist + 1)
+      const backLengths = allLens.slice(257 + hlit);//decode_lens(stream, metaHuffman, hdist + 1)
       this.output.tables.distCodes = backLengths
       this.output.tables.distCodesHuffman = toHuffman(lenToTree(backLengths), alphTo(29))
 

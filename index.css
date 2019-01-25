@@ -5,8 +5,19 @@ pre {
 }
 
 body {
-  margin: auto;
+  /* margin: auto; */
+  /* max-width: 800px; */
+}
+
+.inbody * {
   max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ohp {
+  width: 100%;
+  max-width: 100%;
 }
 
 .tooltip {
