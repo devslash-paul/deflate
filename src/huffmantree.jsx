@@ -100,9 +100,11 @@ export class Huffman extends Component {
     this.knuth(tree, 1, { i: 0 })
 
     return (
-      <svg ref={this.svgRef} viewBox={`${x} ${y} ${w} ${h}`} preserveAspectRatio='xMidYMid meet'
-        style={{ width: "100%", height: "100%" }}>
-        <Node val={tree} />
+      <svg data-x={x} data-y={y} className="ohp" ref={this.svgRef} viewBox={`${x} ${y} ${w} ${h}`} preserveAspectRatio='xMidYMid meet'
+        style={{ width: "90%", height: `${h + 25}px` }}>
+        <g>
+          <Node val={tree} />
+        </g>
       </svg>
     )
   }

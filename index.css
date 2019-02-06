@@ -7,6 +7,7 @@ pre {
 body {
   /* margin: auto; */
   /* max-width: 800px; */
+  background: #fff;
 }
 
 .inbody * {
@@ -18,6 +19,8 @@ body {
 .ohp {
   width: 100%;
   max-width: 100%;
+  margin-left: 5%;
+  margin-right: 5%;
 }
 
 .tooltip {
